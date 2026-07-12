@@ -277,7 +277,7 @@ jobs:
           set -euo pipefail
           USERNAME=""
           for i in $(seq 1 12); do
-            USERNAME=$(kubectl create -o jsonpath='{.status.kubeUserInfo.user.username}' -f - <<'EOF' || echo ""
+            USERNAME=$(kubectl create -o jsonpath='{.status.kubernetesUserInfo.user.username}' -f - <<'EOF' || echo ""
           apiVersion: identity.concierge.pinniped.dev/v1alpha1
           kind: WhoAmIRequest
           EOF
@@ -285,7 +285,11 @@ jobs:
             if [ -n "$USERNAME" ]; then
               break
             fi
-            echo "attempt ${i}/12: WhoAmIRequest not answered yet, retrying..."
+            echo "attempt ${i}/12: no username in response, full response was:"
+            kubectl create -o yaml -f - <<'EOF' || true
+          apiVersion: identity.concierge.pinniped.dev/v1alpha1
+          kind: WhoAmIRequest
+          EOF
             sleep 5
           done
           echo "WhoAmIRequest answered, username: ${USERNAME}"
