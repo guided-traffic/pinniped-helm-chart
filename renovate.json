@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Berlin",
+  "schedule": ["* 5 * * *"],
+  "kubernetes": {
+    "fileMatch": ["^test/e2e/.*\\.ya?ml$"]
+  },
+  "packageRules": [
+    {
+      "description": "GitHub Actions updates are chores and may automerge once the pipeline is green",
+      "matchManagers": ["github-actions"],
+      "semanticCommitType": "chore",
+      "automerge": true
+    },
+    {
+      "description": "Container image updates need review by hans-fischer",
+      "matchDatasources": ["docker"],
+      "assignees": ["hans-fischer"],
+      "automerge": false
+    }
+  ]
+}
