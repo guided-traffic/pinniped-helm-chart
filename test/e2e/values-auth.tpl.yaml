@@ -1,0 +1,48 @@
+# Helm values overlay for the e2e authentication test.
+# Rendered by setup-idp.sh: __E2E_CA_B64__ is replaced with the base64
+# encoded throwaway CA that signed both the Dex and the Supervisor
+# serving certificates.
+#
+# The issuer URL uses the in-cluster Service DNS name on port 8443 so the
+# exact same URL works for the Concierge (in-cluster) and for the pinniped
+# CLI on the CI runner (via port-forward + /etc/hosts entry).
+supervisor:
+  service:
+    # Service port must match the port in the issuer URL, because the CLI
+    # reaches the issuer through `kubectl port-forward` on an unprivileged
+    # local port.
+    port: 8443
+  federationDomains:
+    - name: demo
+      spec:
+        issuer: https://pinniped-supervisor.pinniped.svc.cluster.local:8443/demo-issuer
+        tls:
+          secretName: supervisor-tls
+  identityProviders:
+    - kind: OIDCIdentityProvider
+      name: dex
+      spec:
+        issuer: https://dex.dex.svc.cluster.local/dex
+        tls:
+          certificateAuthorityData: __E2E_CA_B64__
+        authorizationConfig:
+          additionalScopes: [offline_access, email, profile]
+          # Enables the headless cli_password flow used in CI.
+          allowPasswordGrant: true
+        claims:
+          username: email
+        client:
+          secretName: dex-client-credentials
+  secrets:
+    - name: dex-client-credentials
+      stringData:
+        clientID: pinniped-supervisor
+        clientSecret: pinniped-supervisor-e2e-client-secret
+concierge:
+  jwtAuthenticators:
+    - name: supervisor-jwt
+      spec:
+        issuer: https://pinniped-supervisor.pinniped.svc.cluster.local:8443/demo-issuer
+        audience: pinniped-e2e-kind-audience
+        tls:
+          certificateAuthorityData: __E2E_CA_B64__
