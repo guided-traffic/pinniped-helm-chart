@@ -1,0 +1,18 @@
+{{- if .Values.supervisor.enabled }}
+{{- range .Values.supervisor.oidcClients }}
+---
+apiVersion: config.supervisor.pinniped.dev/v1alpha1
+kind: OIDCClient
+metadata:
+  name: {{ required "each oidcClients entry needs a name" .name }}
+  namespace: {{ include "pinniped.supervisor.namespace" $ }}
+  labels:
+    {{- include "pinniped.supervisor.labels" $ | nindent 4 }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- required "each oidcClients entry needs a spec" .spec | toYaml | nindent 2 }}
+{{- end }}
+{{- end }}

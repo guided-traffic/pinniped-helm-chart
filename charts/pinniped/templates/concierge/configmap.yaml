@@ -1,0 +1,40 @@
+{{- if .Values.concierge.enabled }}
+{{- $defaults := dict
+      "discovery" (dict "url" nil)
+      "api" (dict "servingCertificate" (dict
+        "durationSeconds" 2592000
+        "renewBeforeSeconds" 2160000))
+      "apiGroupSuffix" "pinniped.dev"
+      "aggregatedAPIServerDisableAdmissionPlugins" (list)
+      "names" (dict
+        "servingCertificateSecret" "pinniped-concierge-api-tls-serving-certificate"
+        "credentialIssuer" "pinniped-concierge-config"
+        "apiService" "pinniped-concierge-api"
+        "impersonationLoadBalancerService" "pinniped-concierge-impersonation-proxy-load-balancer"
+        "impersonationClusterIPService" "pinniped-concierge-impersonation-proxy-cluster-ip"
+        "impersonationTLSCertificateSecret" "pinniped-concierge-impersonation-proxy-tls-serving-certificate"
+        "impersonationCACertificateSecret" "pinniped-concierge-impersonation-proxy-ca-certificate"
+        "impersonationSignerSecret" "pinniped-concierge-impersonation-proxy-signer-ca-certificate"
+        "agentServiceAccount" "pinniped-concierge-kube-cert-agent"
+        "impersonationProxyServiceAccount" "pinniped-concierge-impersonation-proxy"
+        "impersonationProxyLegacySecret" "pinniped-concierge-impersonation-proxy")
+      "labels" (dict "app" "pinniped-concierge")
+      "kubeCertAgent" (dict
+        "namePrefix" "pinniped-concierge-kube-cert-agent-"
+        "priorityClassName" ""
+        "image" (include "pinniped.image" .))
+      "tls" (dict "onedottwo" (dict "allowedCiphers" (list)))
+      "audit" (dict "logUsernamesAndGroups" "disabled")
+}}
+{{- $config := mustMergeOverwrite $defaults (deepCopy .Values.concierge.config) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pinniped-concierge-config
+  namespace: {{ include "pinniped.concierge.namespace" . }}
+  labels:
+    {{- include "pinniped.concierge.labels" . | nindent 4 }}
+data:
+  pinniped.yaml: |
+    {{- toYaml $config | nindent 4 }}
+{{- end }}

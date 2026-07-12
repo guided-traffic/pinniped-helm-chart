@@ -1,0 +1,35 @@
+{{- if and .Values.supervisor.enabled .Values.supervisor.service.enabled }}
+{{- $svc := .Values.supervisor.service }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: pinniped-supervisor
+  namespace: {{ include "pinniped.supervisor.namespace" . }}
+  labels:
+    {{- include "pinniped.supervisor.labels" . | nindent 4 }}
+    {{- with $svc.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $svc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $svc.type }}
+  {{- with $svc.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  {{- with $svc.loadBalancerClass }}
+  loadBalancerClass: {{ . }}
+  {{- end }}
+  selector:
+    deployment.pinniped.dev: supervisor
+  ports:
+  - name: https
+    protocol: TCP
+    port: {{ $svc.port }}
+    targetPort: 8443
+    {{- if and $svc.nodePort (ne $svc.type "ClusterIP") }}
+    nodePort: {{ $svc.nodePort }}
+    {{- end }}
+{{- end }}

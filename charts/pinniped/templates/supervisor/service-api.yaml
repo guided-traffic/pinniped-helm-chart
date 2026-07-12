@@ -1,0 +1,17 @@
+{{- if .Values.supervisor.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: pinniped-supervisor-api
+  namespace: {{ include "pinniped.supervisor.namespace" . }}
+  labels:
+    {{- include "pinniped.supervisor.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    deployment.pinniped.dev: supervisor
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 10250
+{{- end }}

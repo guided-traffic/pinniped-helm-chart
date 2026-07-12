@@ -1,0 +1,35 @@
+{{- if .Values.createNamespaces }}
+{{- $supNs := include "pinniped.supervisor.namespace" . }}
+{{- $conNs := include "pinniped.concierge.namespace" . }}
+{{- $shared := and .Values.supervisor.enabled .Values.concierge.enabled (eq $supNs $conNs) }}
+{{- if .Values.supervisor.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $supNs }}
+  labels:
+    {{- include "pinniped.supervisor.labels" . | nindent 4 }}
+    {{- with .Values.supervisor.namespaceLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if $shared }}
+    {{- with .Values.concierge.namespaceLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- end }}
+{{- end }}
+{{- if and .Values.concierge.enabled (not $shared) }}
+{{- if .Values.supervisor.enabled }}
+---
+{{- end }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $conNs }}
+  labels:
+    {{- include "pinniped.concierge.labels" . | nindent 4 }}
+    {{- with .Values.concierge.namespaceLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,31 @@
+Pinniped {{ .Chart.AppVersion }} has been installed.
+
+Components:
+{{- if .Values.supervisor.enabled }}
+  - Supervisor  (namespace: {{ include "pinniped.supervisor.namespace" . }})
+{{- end }}
+{{- if .Values.concierge.enabled }}
+  - Concierge   (namespace: {{ include "pinniped.concierge.namespace" . }})
+{{- end }}
+{{- if .Values.stackitSKE.enabled }}
+
+STACKIT SKE mode is ENABLED:
+  The pinniped-concierge-pre-authn-apis ClusterRoleBinding only binds
+  system:unauthenticated (system:authenticated is rejected by the SKE
+  ValidatingAdmissionPolicy). Client logins go through the impersonation
+  proxy; generate kubeconfigs with `pinniped get kubeconfig`.
+{{- end }}
+{{- if and .Values.supervisor.enabled (not .Values.supervisor.federationDomains) }}
+
+Next steps for the Supervisor:
+  - Create a FederationDomain (values: supervisor.federationDomains)
+  - Configure an identity provider (values: supervisor.identityProviders),
+    referencing your client-id/client-secret Secret
+  - Expose the issuer endpoint (values: supervisor.service / supervisor.ingress)
+{{- end }}
+{{- if and .Values.concierge.enabled (not .Values.concierge.jwtAuthenticators) }}
+
+Next steps for the Concierge:
+  - Create a JWTAuthenticator pointing at your FederationDomain issuer
+    (values: concierge.jwtAuthenticators)
+{{- end }}

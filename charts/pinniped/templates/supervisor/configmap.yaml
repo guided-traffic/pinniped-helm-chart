@@ -1,0 +1,25 @@
+{{- if .Values.supervisor.enabled }}
+{{- $defaults := dict
+      "apiGroupSuffix" "pinniped.dev"
+      "names" (dict
+        "defaultTLSCertificateSecret" "pinniped-supervisor-default-tls-certificate"
+        "apiService" "pinniped-supervisor-api")
+      "labels" (dict "app" "pinniped-supervisor")
+      "tls" (dict "onedottwo" (dict "allowedCiphers" (list)))
+      "audit" (dict
+        "logUsernamesAndGroups" "disabled"
+        "logInternalPaths" "disabled")
+      "aggregatedAPIServerDisableAdmissionPlugins" (list)
+}}
+{{- $config := mustMergeOverwrite $defaults (deepCopy .Values.supervisor.config) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pinniped-supervisor-static-config
+  namespace: {{ include "pinniped.supervisor.namespace" . }}
+  labels:
+    {{- include "pinniped.supervisor.labels" . | nindent 4 }}
+data:
+  pinniped.yaml: |
+    {{- toYaml $config | nindent 4 }}
+{{- end }}

@@ -1,0 +1,18 @@
+{{- if .Values.supervisor.enabled }}
+{{- range .Values.supervisor.federationDomains }}
+---
+apiVersion: config.supervisor.pinniped.dev/v1alpha1
+kind: FederationDomain
+metadata:
+  name: {{ required "each federationDomains entry needs a name" .name }}
+  namespace: {{ include "pinniped.supervisor.namespace" $ }}
+  labels:
+    {{- include "pinniped.supervisor.labels" $ | nindent 4 }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- required "each federationDomains entry needs a spec" .spec | toYaml | nindent 2 }}
+{{- end }}
+{{- end }}

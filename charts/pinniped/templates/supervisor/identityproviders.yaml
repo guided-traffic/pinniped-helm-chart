@@ -1,0 +1,22 @@
+{{- if .Values.supervisor.enabled }}
+{{- $validKinds := list "OIDCIdentityProvider" "LDAPIdentityProvider" "ActiveDirectoryIdentityProvider" "GitHubIdentityProvider" }}
+{{- range .Values.supervisor.identityProviders }}
+{{- if not (has .kind $validKinds) }}
+{{- fail (printf "supervisor.identityProviders[%s].kind must be one of %v, got %q" (.name | default "?") $validKinds (.kind | default "")) }}
+{{- end }}
+---
+apiVersion: idp.supervisor.pinniped.dev/v1alpha1
+kind: {{ .kind }}
+metadata:
+  name: {{ required "each identityProviders entry needs a name" .name }}
+  namespace: {{ include "pinniped.supervisor.namespace" $ }}
+  labels:
+    {{- include "pinniped.supervisor.labels" $ | nindent 4 }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- required "each identityProviders entry needs a spec" .spec | toYaml | nindent 2 }}
+{{- end }}
+{{- end }}
