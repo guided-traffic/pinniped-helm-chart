@@ -1,0 +1,32 @@
+{{- if .Values.concierge.enabled }}
+{{- range .Values.concierge.jwtAuthenticators }}
+---
+apiVersion: authentication.concierge.pinniped.dev/v1alpha1
+kind: JWTAuthenticator
+metadata:
+  name: {{ required "each jwtAuthenticators entry needs a name" .name }}
+  labels:
+    {{- include "pinniped.concierge.labels" $ | nindent 4 }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- required "each jwtAuthenticators entry needs a spec" .spec | toYaml | nindent 2 }}
+{{- end }}
+{{- range .Values.concierge.webhookAuthenticators }}
+---
+apiVersion: authentication.concierge.pinniped.dev/v1alpha1
+kind: WebhookAuthenticator
+metadata:
+  name: {{ required "each webhookAuthenticators entry needs a name" .name }}
+  labels:
+    {{- include "pinniped.concierge.labels" $ | nindent 4 }}
+  {{- with .annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- required "each webhookAuthenticators entry needs a spec" .spec | toYaml | nindent 2 }}
+{{- end }}
+{{- end }}

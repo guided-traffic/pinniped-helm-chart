@@ -1,0 +1,283 @@
+# Default values for the pinniped chart.
+#
+# The chart follows the official upstream install manifests for Pinniped
+# v0.47.0. Resource names are kept identical to upstream (they are referenced
+# from the pinniped.yaml static config), so only one release of this chart can
+# be installed per cluster.
+
+# -- Namespace for all namespaced resources of both components.
+# Empty string = the Helm release namespace.
+namespace: ""
+
+# -- Create Namespace objects for the component namespaces (with the
+# namespaceLabels below). Not needed when installing into the release
+# namespace with `helm install --create-namespace`.
+createNamespaces: false
+
+stackitSKE:
+  # -- STACKIT SKE compatibility flag.
+  # SKE (Gardener-based) ships a platform-managed ValidatingAdmissionPolicy
+  # that rejects any RBAC binding to the group `system:authenticated`. With
+  # this flag enabled, the `pinniped-concierge-pre-authn-apis`
+  # ClusterRoleBinding deviates from upstream and only binds
+  # `system:unauthenticated` — the anonymous path used by the pinniped CLI
+  # during login. The only loss is `pinniped whoami` through the aggregation
+  # layer for already-authenticated users; on SKE all client traffic goes
+  # through the impersonation proxy anyway. See PROBLEM.md in this repository.
+  enabled: false
+
+image:
+  repository: ghcr.io/vmware/pinniped/pinniped-server
+  # -- Image tag. Empty string = the chart's appVersion.
+  tag: ""
+  # -- Image digest as pinned by the upstream v0.47.0 manifests.
+  # Set to "" when overriding the tag.
+  digest: "sha256:3a46e1ea8b874281698dd27e60d6f9b46738cb10483baa9dc78a0023cc17e29d"
+  pullPolicy: IfNotPresent
+
+# -- Pull secrets for the pinniped-server image, e.g. [{name: my-registry}].
+imagePullSecrets: []
+
+supervisor:
+  # -- Deploy the Pinniped Supervisor component.
+  enabled: true
+
+  # -- Override the namespace for the supervisor only.
+  namespaceOverride: ""
+
+  # -- Extra labels for the supervisor Namespace object (createNamespaces=true).
+  namespaceLabels: {}
+
+  replicas: 2
+
+  # -- Additional labels for the supervisor pods.
+  podLabels: {}
+
+  # -- Additional annotations for the supervisor pods.
+  podAnnotations: {}
+
+  priorityClassName: ""
+
+  # -- Additional environment variables for the supervisor container,
+  # e.g. [{name: HTTPS_PROXY, value: "http://proxy:3128"}].
+  extraEnv: []
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations:
+    - key: kubernetes.io/arch
+      effect: NoSchedule
+      operator: Equal
+      value: amd64
+    - key: kubernetes.io/arch
+      effect: NoSchedule
+      operator: Equal
+      value: arm64
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 50
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                deployment.pinniped.dev: supervisor
+            topologyKey: kubernetes.io/hostname
+
+  # -- Deep-merged over the upstream defaults of the supervisor's static
+  # config (pinniped.yaml). Use for e.g. `log: {level: debug}`,
+  # `audit: {logUsernamesAndGroups: enabled}` or TLS cipher restrictions.
+  # The `names` block should not be changed (resource names are fixed).
+  config: {}
+
+  # Service exposing the supervisor's issuer endpoint (port 8443). The
+  # upstream install manifest does not create this Service; without it the
+  # supervisor is unreachable for OIDC clients. Point your Ingress or
+  # LoadBalancer here.
+  service:
+    enabled: true
+    type: ClusterIP
+    port: 443
+    # -- Only used for type NodePort / LoadBalancer.
+    nodePort: null
+    annotations: {}
+    labels: {}
+    loadBalancerIP: ""
+    loadBalancerClass: ""
+
+  # Optional Ingress for the supervisor issuer endpoint. The supervisor
+  # serves TLS itself (secret `pinniped-supervisor-default-tls-certificate`
+  # or per-FederationDomain certs), so the backend speaks HTTPS — configure
+  # your controller accordingly (e.g. nginx backend-protocol annotation) or
+  # use TLS passthrough.
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    # e.g.
+    # hosts:
+    #   - host: login.example.com
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+    hosts: []
+    tls: []
+
+  # -- FederationDomain custom resources to create in the supervisor
+  # namespace. Each entry: {name, annotations (optional), spec}. The spec is
+  # rendered verbatim (full upstream API surface).
+  # e.g.
+  # federationDomains:
+  #   - name: demo
+  #     spec:
+  #       issuer: https://login.example.com/demo-issuer
+  #       tls:
+  #         secretName: login-tls
+  federationDomains: []
+
+  # -- Identity provider custom resources to create in the supervisor
+  # namespace. Each entry: {kind, name, annotations (optional), spec}.
+  # kind: OIDCIdentityProvider | LDAPIdentityProvider |
+  #       ActiveDirectoryIdentityProvider | GitHubIdentityProvider.
+  # The spec is rendered verbatim. Reference credentials via an existing
+  # (external) Secret, e.g. spec.client.secretName for OIDC.
+  # e.g.
+  # identityProviders:
+  #   - kind: OIDCIdentityProvider
+  #     name: keycloak
+  #     spec:
+  #       issuer: https://keycloak.example.com/realms/main
+  #       authorizationConfig:
+  #         additionalScopes: [offline_access, groups, email]
+  #       claims:
+  #         username: email
+  #         groups: groups
+  #       client:
+  #         secretName: keycloak-oidc-client   # external Secret
+  identityProviders: []
+
+  # -- OIDCClient custom resources (dynamic clients) in the supervisor
+  # namespace. Names must start with "client.oauth.pinniped.dev-".
+  oidcClients: []
+
+  # -- Optional chart-managed Secrets in the supervisor namespace, e.g. IDP
+  # client credentials when NOT provided by an external secret manager.
+  # Each entry: {name, type (default secrets.pinniped.dev/oidc-client),
+  # annotations (optional), stringData}.
+  # e.g.
+  # secrets:
+  #   - name: keycloak-oidc-client
+  #     type: secrets.pinniped.dev/oidc-client
+  #     stringData:
+  #       clientID: pinniped
+  #       clientSecret: "..."
+  secrets: []
+
+concierge:
+  # -- Deploy the Pinniped Concierge component.
+  enabled: true
+
+  # -- Override the namespace for the concierge only.
+  namespaceOverride: ""
+
+  # -- Extra labels for the concierge Namespace object (createNamespaces=true).
+  # Upstream labels the namespace for privileged pod security admission
+  # (required by the kube-cert-agent on clusters with visible control planes).
+  namespaceLabels:
+    pod-security.kubernetes.io/enforce: privileged
+
+  replicas: 2
+
+  # -- Additional labels for the concierge pods.
+  podLabels: {}
+
+  # -- Additional annotations for the concierge pods.
+  podAnnotations: {}
+
+  priorityClassName: ""
+
+  # -- Additional environment variables for the concierge container.
+  extraEnv: []
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
+    - key: node-role.kubernetes.io/master
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/control-plane
+      effect: NoSchedule
+    - key: kubernetes.io/arch
+      effect: NoSchedule
+      operator: Equal
+      value: amd64
+    - key: kubernetes.io/arch
+      effect: NoSchedule
+      operator: Equal
+      value: arm64
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 50
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                deployment.pinniped.dev: concierge
+            topologyKey: kubernetes.io/hostname
+
+  # -- Deep-merged over the upstream defaults of the concierge config
+  # (pinniped.yaml), e.g. `log: {level: debug}` or
+  # `kubeCertAgent: {priorityClassName: system-cluster-critical}`.
+  # The `names` block should not be changed (resource names are fixed).
+  config: {}
+
+  credentialIssuer:
+    # -- Create the CredentialIssuer (upstream default). The name is fixed to
+    # `pinniped-concierge-config` (referenced from the concierge config).
+    create: true
+    annotations: {}
+    # -- CredentialIssuer spec, rendered verbatim (upstream default below).
+    # On managed clusters (STACKIT SKE, EKS, GKE, ...) `mode: auto` detects
+    # the hidden control plane and starts the impersonation proxy behind a
+    # LoadBalancer Service.
+    spec:
+      impersonationProxy:
+        mode: auto
+        service:
+          type: LoadBalancer
+          annotations:
+            service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "4000"
+
+  # -- JWTAuthenticator custom resources (cluster-scoped). Each entry:
+  # {name, annotations (optional), spec}. Typically points at a
+  # FederationDomain issuer of the supervisor.
+  # e.g.
+  # jwtAuthenticators:
+  #   - name: supervisor
+  #     spec:
+  #       issuer: https://login.example.com/demo-issuer
+  #       audience: my-cluster-random-suffix
+  #       tls:
+  #         certificateAuthorityData: "..."
+  jwtAuthenticators: []
+
+  # -- WebhookAuthenticator custom resources (cluster-scoped).
+  webhookAuthenticators: []

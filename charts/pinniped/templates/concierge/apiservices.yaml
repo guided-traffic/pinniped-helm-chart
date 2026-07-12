@@ -1,0 +1,34 @@
+{{- if .Values.concierge.enabled }}
+{{- $ns := include "pinniped.concierge.namespace" . }}
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.login.concierge.pinniped.dev
+  labels:
+    {{- include "pinniped.concierge.labels" . | nindent 4 }}
+spec:
+  version: v1alpha1
+  group: login.concierge.pinniped.dev
+  groupPriorityMinimum: 9900
+  versionPriority: 15
+  service:
+    name: pinniped-concierge-api
+    namespace: {{ $ns }}
+    port: 443
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.identity.concierge.pinniped.dev
+  labels:
+    {{- include "pinniped.concierge.labels" . | nindent 4 }}
+spec:
+  version: v1alpha1
+  group: identity.concierge.pinniped.dev
+  groupPriorityMinimum: 9900
+  versionPriority: 15
+  service:
+    name: pinniped-concierge-api
+    namespace: {{ $ns }}
+    port: 443
+{{- end }}
