@@ -67,7 +67,7 @@ jobs:
   e2e:
     name: E2E Test (Kind)
     runs-on: self-hosted
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -295,6 +295,28 @@ jobs:
           echo "WhoAmIRequest answered, username: ${USERNAME}"
           test -n "$USERNAME"
 
+      - name: Install pinniped CLI
+        run: |
+          set -euo pipefail
+          VERSION=$(awk '/^appVersion:/{gsub(/"/,"",$2); print $2}' charts/pinniped/Chart.yaml)
+          case "$(uname -m)" in
+            x86_64) ARCH=amd64 ;;
+            aarch64|arm64) ARCH=arm64 ;;
+            *) echo "unsupported arch $(uname -m)"; exit 1 ;;
+          esac
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o "$HOME/.local/bin/pinniped" \
+            "https://github.com/vmware-tanzu/pinniped/releases/download/${VERSION}/pinniped-cli-linux-${ARCH}"
+          chmod +x "$HOME/.local/bin/pinniped"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/pinniped" version
+
+      - name: Deploy mock IdP (Dex) and wire up Pinniped
+        run: ./test/e2e/setup-idp.sh
+
+      - name: E2E login with synthetic credentials
+        run: ./test/e2e/auth-test.sh
+
       - name: Verify stackitSKE flag on the cluster
         run: |
           set -euo pipefail
@@ -314,6 +336,9 @@ jobs:
           fi
           echo "SKE flag verified on cluster."
 
+      - name: E2E login still works in SKE mode
+        run: ./test/e2e/auth-test.sh
+
       - name: Collect logs on failure
         if: failure()
         run: |
@@ -327,6 +352,11 @@ jobs:
           kubectl -n pinniped get events --sort-by='.lastTimestamp' || true
           echo "=== APIServices ==="
           kubectl get apiservices | grep pinniped || true
+          echo "=== Dex logs ==="
+          kubectl -n dex logs -l app=dex --tail=100 || true
+          echo "=== Pinniped custom resources ==="
+          kubectl -n pinniped get oidcidentityprovider,federationdomain -o yaml || true
+          kubectl get jwtauthenticator -o yaml || true
 
       - name: Cleanup Kind cluster
         if: always()

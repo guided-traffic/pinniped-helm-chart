@@ -1,0 +1,110 @@
+# Mock OIDC identity provider for the e2e login test.
+#
+# Dex runs in-cluster with a single synthetic static user and the local
+# password connector enabled, so the Pinniped Supervisor can perform a
+# resource-owner password grant against it (headless CI login, no browser).
+#
+# Synthetic credentials (test-only, no real secrets):
+#   username: pinny@example.com
+#   password: password
+#
+# The TLS secret `dex-tls` is created by setup-idp.sh from a throwaway CA.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dex
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex
+  namespace: dex
+data:
+  config.yaml: |
+    issuer: https://dex.dex.svc.cluster.local/dex
+    storage:
+      type: memory
+    web:
+      https: 0.0.0.0:5556
+      tlsCert: /etc/dex/tls/tls.crt
+      tlsKey: /etc/dex/tls/tls.key
+    oauth2:
+      skipApprovalScreen: true
+      # Allow grant_type=password against the static password DB below.
+      passwordConnector: local
+    enablePasswordDB: true
+    staticPasswords:
+      # bcrypt hash of the literal string "password" (upstream Dex example hash)
+      - email: pinny@example.com
+        hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+        username: pinny
+        userID: 9f2c3a44-6b1e-4e5f-9c1a-1d2b3c4d5e6f
+    staticClients:
+      - id: pinniped-supervisor
+        secret: pinniped-supervisor-e2e-client-secret
+        name: Pinniped Supervisor
+        redirectURIs:
+          - https://pinniped-supervisor.pinniped.svc.cluster.local:8443/demo-issuer/callback
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex
+  namespace: dex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dex
+  template:
+    metadata:
+      labels:
+        app: dex
+    spec:
+      containers:
+        - name: dex
+          image: ghcr.io/dexidp/dex:v2.41.1
+          command: ["/usr/local/bin/dex", "serve", "/etc/dex/cfg/config.yaml"]
+          ports:
+            - name: https
+              containerPort: 5556
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dex/cfg
+              readOnly: true
+            - name: tls
+              mountPath: /etc/dex/tls
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: 5556
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: config
+          configMap:
+            name: dex
+        - name: tls
+          secret:
+            secretName: dex-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex
+  namespace: dex
+spec:
+  selector:
+    app: dex
+  ports:
+    - name: https
+      port: 443
+      targetPort: 5556
