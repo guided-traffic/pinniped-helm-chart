@@ -23,7 +23,7 @@ stackitSKE:
   # `system:unauthenticated` — the anonymous path used by the pinniped CLI
   # during login. The only loss is `pinniped whoami` through the aggregation
   # layer for already-authenticated users; on SKE all client traffic goes
-  # through the impersonation proxy anyway. See PROBLEM.md in this repository.
+  # through the impersonation proxy anyway. Full analysis: repository README.
   enabled: false
 
 image:

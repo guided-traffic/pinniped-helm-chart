@@ -23,6 +23,16 @@ APIServices and ClusterRoles are singletons anyway).
 
 ## Installing
 
+From the GitHub-Pages-hosted Helm repository:
+
+```console
+helm repo add pinniped-helm-chart https://guided-traffic.github.io/pinniped-helm-chart
+helm install pinniped pinniped-helm-chart/pinniped \
+  --namespace pinniped --create-namespace
+```
+
+Or from a checkout:
+
 ```console
 helm install pinniped ./charts/pinniped \
   --namespace pinniped --create-namespace
@@ -57,7 +67,9 @@ through the aggregation layer for already-authenticated users; on SKE the
 client traffic goes through the concierge's impersonation proxy anyway
 (anonymous auth is disabled on the Gardener kube-apiserver, and the
 CredentialIssuer's `impersonationProxy.mode: auto` detects the managed
-control plane). See [PROBLEM.md](../../PROBLEM.md) for the full analysis.
+control plane). See the
+[repository README](../../README.md#stackit-ske-the-systemauthenticated-problem)
+for the full analysis.
 
 ## Identity providers and external secrets
 
