@@ -3,6 +3,27 @@ entries:
   pinniped:
   - apiVersion: v2
     appVersion: v0.47.0
+    created: "2026-07-12T21:14:32.563646117Z"
+    description: Helm chart for Pinniped Supervisor and Concierge, derived from the
+      official upstream install manifests (install-pinniped-supervisor.yaml and install-pinniped-concierge.yaml).
+    digest: 85d0eb3641daab3690dab569ccd9a71ee51d253439521c0f32c45021ade31891
+    home: https://pinniped.dev
+    keywords:
+    - pinniped
+    - authentication
+    - oidc
+    - sso
+    - kubernetes
+    kubeVersion: '>=1.25.0-0'
+    name: pinniped
+    sources:
+    - https://github.com/vmware-tanzu/pinniped
+    type: application
+    urls:
+    - https://github.com/guided-traffic/pinniped-helm-chart/releases/download/pinniped-1.2.0/pinniped-1.2.0.tgz
+    version: 1.2.0
+  - apiVersion: v2
+    appVersion: v0.47.0
     created: "2026-07-12T21:00:50.585071826Z"
     description: Helm chart for Pinniped Supervisor and Concierge, derived from the
       official upstream install manifests (install-pinniped-supervisor.yaml and install-pinniped-concierge.yaml).
@@ -43,4 +64,4 @@ entries:
     urls:
     - https://github.com/guided-traffic/pinniped-helm-chart/releases/download/pinniped-1.0.0/pinniped-1.0.0.tgz
     version: 1.0.0
-generated: "2026-07-12T21:00:50.585081063Z"
+generated: "2026-07-12T21:14:32.563654144Z"
