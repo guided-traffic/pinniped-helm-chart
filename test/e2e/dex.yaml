@@ -78,7 +78,8 @@ spec:
           readinessProbe:
             httpGet:
               scheme: HTTPS
-              path: /healthz
+              # Dex mounts all routes under the issuer URL path (/dex).
+              path: /dex/healthz
               port: 5556
             initialDelaySeconds: 3
             periodSeconds: 5
