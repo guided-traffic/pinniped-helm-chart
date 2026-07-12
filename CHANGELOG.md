@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/guided-traffic/pinniped-helm-chart/compare/v1.1.0...v1.2.0) (2026-07-12)
+
+
+### Features
+
+* renovate ([#3](https://github.com/guided-traffic/pinniped-helm-chart/issues/3)) ([1b0b6ee](https://github.com/guided-traffic/pinniped-helm-chart/commit/1b0b6eee76c8b48819204b3c88c2774c352bb032))
+
 # [1.1.0](https://github.com/guided-traffic/pinniped-helm-chart/compare/v1.0.0...v1.1.0) (2026-07-12)
 
 
